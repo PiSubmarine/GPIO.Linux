@@ -85,7 +85,9 @@ namespace PiSubmarine::GPIO::Linux
     {
         for (const auto& chip : m_Chips)
         {
-            if (std::filesystem::equivalent(chip->path(), devicePath))
+            auto chipPathCanonical = std::filesystem::weakly_canonical(chip->path());
+            auto devicePathCanonical = std::filesystem::weakly_canonical(devicePath);
+            if (chipPathCanonical == devicePathCanonical)
             {
                 return chip;
             }
