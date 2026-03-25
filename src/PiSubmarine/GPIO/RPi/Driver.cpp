@@ -30,10 +30,26 @@ namespace PiSubmarine::GPIO::RPi
         return nullptr;
     }
 
-    std::shared_ptr<Api::IPinGroup> Driver::CreatePinGroup(
-        const std::vector<std::pair<std::filesystem::path, std::size_t>>& pins)
+    std::shared_ptr<Api::IPinGroup> Driver::CreatePinGroup(std::string_view groupName, std::filesystem::path chipPath,
+                                                           std::vector<std::size_t> pins)
     {
-        return nullptr;
+        for (const auto& group: m_PinGroups)
+        {
+            if (group->GetName() == groupName)
+            {
+                return group;
+            }
+        }
+
+        std::vector<PinInfo> pinInfos;
+        pinInfos.reserve(pins.size());
+        for (const auto& pinOffset: pins)
+        {
+            pinInfos.push_back(GetPinInfo(chipPath, pinOffset));
+        }
+        auto group = std::make_shared<PinGroup>(*this, pinInfos, groupName);
+        m_PinGroups.push_back(group);
+        return group;
     }
 
     bool Driver::GetPinInfo(std::string_view userName, PinInfo& outInfo) const
@@ -63,7 +79,7 @@ namespace PiSubmarine::GPIO::RPi
         throw std::invalid_argument("PinInfo not found: " + devicePath.string() + "[" + std::to_string(line) + "]");
     }
 
-    std::shared_ptr<gpiod::chip> Driver::GetChip(std::filesystem::path devicePath)
+    std::shared_ptr<gpiod::chip> Driver::GetChip(const std::filesystem::path& devicePath)
     {
         for (const auto& chip : m_Chips)
         {
@@ -95,7 +111,6 @@ namespace PiSubmarine::GPIO::RPi
 
         for (const auto& entry : std::filesystem::directory_iterator(devDir))
         {
-
             if (!entry.is_character_file())
             {
                 continue;

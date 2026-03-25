@@ -47,23 +47,14 @@ namespace
 
 namespace PiSubmarine::GPIO::RPi
 {
-    PinGroup::PinGroup(Driver& driver, const std::vector<PinInfo>& pins, std::string_view groupName) :
-        m_Pins(pins),
-        m_Driver(driver),
+    PinGroup::PinGroup(gpiod::chip& chip, const std::vector<gpiod::line::offset>& offsets, std::string_view groupName) :
+        m_Chip(chip),
+        m_Pins(offsets),
         m_GroupName(groupName)
     {
-        if (pins.size() > sizeof(Api::BitfieldType) * 8)
+        if (m_Pins.size() > sizeof(Api::BitfieldType) * 8)
         {
             throw std::invalid_argument("Number of pins is too large");
-        }
-
-        const std::filesystem::path chipPath = std::filesystem::canonical(pins[0].DevicePath);
-        for (const auto& pin : pins)
-        {
-            if (pin.DevicePath != chipPath)
-            {
-                throw std::invalid_argument("Only pins from the same GPIO chip are supported in the same PinGroup");
-            }
         }
     }
 
@@ -86,28 +77,28 @@ namespace PiSubmarine::GPIO::RPi
     {
         m_LineRequest = nullptr;
 
-        auto chip = m_Driver.GetChip(m_Pins[0].DevicePath);
         gpiod::line_settings inputSettings;
         inputSettings.set_direction(gpiod::line::direction::INPUT);
         gpiod::line_settings outputSettings;
         outputSettings.set_direction(gpiod::line::direction::OUTPUT);
 
-        auto requestBuilder = chip->prepare_request();
+        auto requestBuilder = m_Chip.prepare_request();
         for (size_t i = 0; i < m_Pins.size(); i++)
         {
             if (directions.Get(i) == Api::Direction::Input)
             {
-                requestBuilder.add_line_settings(m_Pins[i].Line, inputSettings);
+                requestBuilder.add_line_settings(m_Pins[i], inputSettings);
             }
             else if (directions.Get(i) == Api::Direction::Output)
             {
-                requestBuilder.add_line_settings(m_Pins[i].Line, outputSettings);
+                requestBuilder.add_line_settings(m_Pins[i], outputSettings);
             }
             else
             {
                 throw std::runtime_error("Invalid direction");
             }
         }
+        requestBuilder.set_consumer(m_GroupName);
 
         auto request = requestBuilder.do_request();
 
@@ -138,14 +129,18 @@ namespace PiSubmarine::GPIO::RPi
 
     void PinGroup::SetLevels(Api::Levels levels, Api::Mask mask)
     {
-        std::vector<gpiod::line::value> levelsGpiod;
         for (size_t i = 0; i < m_Pins.size(); i++)
         {
             if (mask.Get(i) != Api::MaskBit::Included)
             {
-               continue;
+                continue;
             }
-            m_LineRequest->set_value(m_Pins[i].Line, Convert(levels.Get(i)));
+            m_LineRequest->set_value(m_Pins[i], Convert(levels.Get(i)));
         }
+    }
+
+    std::string_view PinGroup::GetName() const
+    {
+        return m_GroupName;
     }
 }
