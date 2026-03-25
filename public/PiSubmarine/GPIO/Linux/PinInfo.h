@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <optional>
 
-namespace PiSubmarine::GPIO::RPi
+namespace PiSubmarine::GPIO::Linux
 {
     struct PinInfo
     {

@@ -1,7 +1,7 @@
-#include "PiSubmarine/GPIO/RPi/Driver.h"
+#include "PiSubmarine/GPIO/Linux/Driver.h"
 #include <gpiod.hpp>
 
-namespace PiSubmarine::GPIO::RPi
+namespace PiSubmarine::GPIO::Linux
 {
     Driver::Driver(std::string_view consumerName) : m_ConsumerName(consumerName)
     {
@@ -30,8 +30,8 @@ namespace PiSubmarine::GPIO::RPi
         return nullptr;
     }
 
-    std::shared_ptr<Api::IPinGroup> Driver::CreatePinGroup(std::string_view groupName, std::filesystem::path chipPath,
-                                                           std::vector<std::size_t> pins)
+    std::shared_ptr<Api::IPinGroup> Driver::CreatePinGroup(std::string_view groupName, const std::filesystem::path& chipPath,
+                                                           const std::vector<std::size_t>& pins)
     {
         for (const auto& group: m_PinGroups)
         {
@@ -41,13 +41,15 @@ namespace PiSubmarine::GPIO::RPi
             }
         }
 
-        std::vector<PinInfo> pinInfos;
-        pinInfos.reserve(pins.size());
-        for (const auto& pinOffset: pins)
+        std::vector<gpiod::line::offset> offsets;
+        offsets.reserve(pins.size());
+        for (const auto& pin : pins)
         {
-            pinInfos.push_back(GetPinInfo(chipPath, pinOffset));
+            offsets.emplace_back(pin);
         }
-        auto group = std::make_shared<PinGroup>(*this, pinInfos, groupName);
+
+        auto chip = GetChip(chipPath);
+        auto group = std::make_shared<PinGroup>(*chip, offsets, groupName);
         m_PinGroups.push_back(group);
         return group;
     }

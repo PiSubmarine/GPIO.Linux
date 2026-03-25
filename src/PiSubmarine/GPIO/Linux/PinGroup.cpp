@@ -1,9 +1,9 @@
-#include "PiSubmarine/GPIO/RPi/PinGroup.h"
+#include "PiSubmarine/GPIO/Linux/PinGroup.h"
 #include <gpiod.hpp>
 #include <ranges>
 #include <unordered_map>
 
-#include "PiSubmarine/GPIO/RPi/Driver.h"
+#include "PiSubmarine/GPIO/Linux/Driver.h"
 
 namespace
 {
@@ -45,7 +45,7 @@ namespace
     }
 }
 
-namespace PiSubmarine::GPIO::RPi
+namespace PiSubmarine::GPIO::Linux
 {
     PinGroup::PinGroup(gpiod::chip& chip, const std::vector<gpiod::line::offset>& offsets, std::string_view groupName) :
         m_Chip(chip),
