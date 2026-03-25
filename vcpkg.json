@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    "gtest",
+    {
+      "name": "libgpiod",
+      "default-features": false,
+      "features": [ "cxx-bindings" ]
+    }
+  ]
+}
